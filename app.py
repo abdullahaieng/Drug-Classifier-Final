@@ -25,6 +25,7 @@ import seaborn as sns
 import sklearn
 import streamlit as st
 from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -60,6 +61,16 @@ RISK_LEVEL = {
     "drugC": "Moderate",
     "drugX": "Low",
 }
+
+def build_logistic_regressor():
+    """
+    Notebook: LogisticRegression(solver='liblinear', random_state=42).
+    sklearn>=1.7 (Streamlit Cloud) rejects liblinear for n_classes>=3 unless OvR-wrapped.
+    Same one-vs-rest behaviour as older sklearn defaults; metrics unchanged on Drug200.
+    """
+    base = LogisticRegression(random_state=42, solver="liblinear", max_iter=1000)
+    return OneVsRestClassifier(base)
+
 
 RECOMMENDATION = {
     "DrugY": "Primary regimen Y is indicated. Schedule routine follow-up and monitor vitals.",
@@ -118,7 +129,7 @@ def notebook_train_pipeline(df_clean: pd.DataFrame) -> dict:
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    logistic = LogisticRegression(random_state=42, solver="liblinear")
+    logistic = build_logistic_regressor()
     knn = KNeighborsClassifier()
     logistic.fit(X_train_scaled, y_train)
     knn.fit(X_train_scaled, y_train)
@@ -160,21 +171,33 @@ def notebook_train_pipeline(df_clean: pd.DataFrame) -> dict:
     }
 
 
-def export_models() -> None:
+def persist_bundle(bundle: dict) -> None:
+    """Save trained artifacts; ignore disk errors (ephemeral cloud FS)."""
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    mapping = {
+        "logistic": bundle["logistic"],
+        "knn": bundle["knn"],
+        "scaler": bundle["scaler"],
+        "encoders": bundle["encoders"],
+        "drug_encoder": bundle["drug_encoder"],
+    }
+    for key, obj in mapping.items():
+        try:
+            joblib.dump(obj, MODEL_FILES[key])
+        except OSError:
+            pass
+
+
+def export_models() -> dict:
     """Train with notebook logic and persist joblib artifacts."""
     df = preprocess_dataframe(pd.read_csv(DATA_PATH))
     bundle = notebook_train_pipeline(df)
-
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    joblib.dump(bundle["logistic"], MODEL_FILES["logistic"])
-    joblib.dump(bundle["knn"], MODEL_FILES["knn"])
-    joblib.dump(bundle["scaler"], MODEL_FILES["scaler"])
-    joblib.dump(bundle["encoders"], MODEL_FILES["encoders"])
-    joblib.dump(bundle["drug_encoder"], MODEL_FILES["drug_encoder"])
+    persist_bundle(bundle)
 
     print(f"Artifacts saved to {MODELS_DIR}")
     print(f"Logistic Regression accuracy: {bundle['lr_metrics']['accuracy']:.2f}%")
     print(f"KNN accuracy: {bundle['knn_metrics']['accuracy']:.2f}%")
+    return bundle
 
 
 # =============================================================================
@@ -184,39 +207,45 @@ def _missing_artifacts() -> list[Path]:
     return [p for p in MODEL_FILES.values() if not p.exists()]
 
 
-def ensure_artifacts() -> bool:
-    """
-    Create model pkl files if absent (local or Streamlit Cloud first boot).
-    Returns True when export ran.
-    """
-    if not _missing_artifacts():
-        return False
+@st.cache_resource
+def _trained_bundle() -> dict:
+    """Train once in memory when pkl files are missing (Streamlit Cloud safe)."""
     if not DATA_PATH.is_file():
         raise FileNotFoundError(
             f"Dataset missing: {DATA_PATH}\n"
             "Add drug200.csv next to app.py in your GitHub repo."
         )
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    export_models()
+    df = preprocess_dataframe(pd.read_csv(DATA_PATH))
+    bundle = notebook_train_pipeline(df)
+    persist_bundle(bundle)
+    return {
+        "logistic": bundle["logistic"],
+        "knn": bundle["knn"],
+        "scaler": bundle["scaler"],
+        "encoders": bundle["encoders"],
+        "drug_encoder": bundle["drug_encoder"],
+    }
+
+
+def ensure_artifacts() -> bool:
+    """Load from disk or train. Returns True when training ran."""
+    if not _missing_artifacts():
+        return False
+    _trained_bundle()
     return True
 
 
 @st.cache_resource
 def load_artifacts() -> dict:
-    ensure_artifacts()
-    missing = _missing_artifacts()
-    if missing:
-        raise FileNotFoundError(
-            "Model files could not be created. Run locally: python app.py export\n"
-            + "\n".join(str(m) for m in missing)
-        )
-    return {
-        "logistic": joblib.load(MODEL_FILES["logistic"]),
-        "knn": joblib.load(MODEL_FILES["knn"]),
-        "scaler": joblib.load(MODEL_FILES["scaler"]),
-        "encoders": joblib.load(MODEL_FILES["encoders"]),
-        "drug_encoder": joblib.load(MODEL_FILES["drug_encoder"]),
-    }
+    if not _missing_artifacts():
+        return {
+            "logistic": joblib.load(MODEL_FILES["logistic"]),
+            "knn": joblib.load(MODEL_FILES["knn"]),
+            "scaler": joblib.load(MODEL_FILES["scaler"]),
+            "encoders": joblib.load(MODEL_FILES["encoders"]),
+            "drug_encoder": joblib.load(MODEL_FILES["drug_encoder"]),
+        }
+    return _trained_bundle()
 
 
 @st.cache_data
@@ -233,11 +262,12 @@ def evaluation_bundle(_cache_key: int = 1) -> dict:
     df = load_clean_data()
     pipe = notebook_train_pipeline(df)
 
-    encoders = joblib.load(MODEL_FILES["encoders"])
-    scaler = joblib.load(MODEL_FILES["scaler"])
-    drug_enc = joblib.load(MODEL_FILES["drug_encoder"])
-    logistic = joblib.load(MODEL_FILES["logistic"])
-    knn = joblib.load(MODEL_FILES["knn"])
+    art = load_artifacts()
+    encoders = art["encoders"]
+    scaler = art["scaler"]
+    drug_enc = art["drug_encoder"]
+    logistic = art["logistic"]
+    knn = art["knn"]
 
     X = df.drop("Drug", axis=1)
     y = drug_enc.transform(df["Drug"])
@@ -874,7 +904,10 @@ def render_notebook_lab(ev: dict, dark: bool) -> None:
         st.subheader("Model training (notebook)")
         c1, c2 = st.columns(2)
         with c1:
-            st.code("LogisticRegression(random_state=42, solver='liblinear')")
+            st.code(
+                "OneVsRestClassifier(LogisticRegression(random_state=42, solver='liblinear'))"
+            )
+            st.caption("OvR wrapper required for sklearn>=1.7 + liblinear + 5 classes (notebook-equivalent).")
             st.metric("Train shape", str(ev["train_shape"]))
         with c2:
             st.code("KNeighborsClassifier()")
@@ -944,6 +977,7 @@ def run_app() -> None:
     try:
         if ensure_artifacts():
             load_artifacts.clear()
+            _trained_bundle.clear()
             evaluation_bundle.clear()
         with st.spinner("Loading models…"):
             artifacts = load_artifacts()
