@@ -184,12 +184,30 @@ def _missing_artifacts() -> list[Path]:
     return [p for p in MODEL_FILES.values() if not p.exists()]
 
 
+def ensure_artifacts() -> bool:
+    """
+    Create model pkl files if absent (local or Streamlit Cloud first boot).
+    Returns True when export ran.
+    """
+    if not _missing_artifacts():
+        return False
+    if not DATA_PATH.is_file():
+        raise FileNotFoundError(
+            f"Dataset missing: {DATA_PATH}\n"
+            "Add drug200.csv next to app.py in your GitHub repo."
+        )
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    export_models()
+    return True
+
+
 @st.cache_resource
 def load_artifacts() -> dict:
+    ensure_artifacts()
     missing = _missing_artifacts()
     if missing:
         raise FileNotFoundError(
-            "Missing model files. Run: python app.py export\n"
+            "Model files could not be created. Run locally: python app.py export\n"
             + "\n".join(str(m) for m in missing)
         )
     return {
@@ -209,8 +227,7 @@ def load_clean_data() -> pd.DataFrame:
 @st.cache_data
 def evaluation_bundle(_cache_key: int = 1) -> dict:
     """Dynamic metrics from saved artifacts + notebook train/test split."""
-    if _missing_artifacts():
-        raise FileNotFoundError("Run: python app.py export")
+    ensure_artifacts()
 
     df_raw = pd.read_csv(DATA_PATH)
     df = load_clean_data()
@@ -925,9 +942,17 @@ def run_app() -> None:
     inject_css(st.session_state.dark_mode)
 
     try:
-        artifacts = load_artifacts()
+        if ensure_artifacts():
+            load_artifacts.clear()
+            evaluation_bundle.clear()
+        with st.spinner("Loading models…"):
+            artifacts = load_artifacts()
     except FileNotFoundError as exc:
         st.error(str(exc))
+        st.info(
+            "Deploy checklist: `drug200.csv` + `app.py` in repo root. "
+            "Missing `.pkl` files are auto-generated on first run (~10s)."
+        )
         st.stop()
 
     df = load_clean_data()
@@ -950,7 +975,7 @@ def run_app() -> None:
             st.metric("Best model", ev["best_model"])
             st.metric("LR Accuracy", f"{ev['lr_metrics']['accuracy']:.2f}%")
             st.metric("KNN Accuracy", f"{ev['knn_metrics']['accuracy']:.2f}%")
-        st.caption("Models loaded from disk · No retrain on predict")
+        st.caption("Saved models on disk · Predict uses export only")
 
     if st.session_state.page == "Prediction":
         render_prediction_page(df, artifacts, st.session_state.dark_mode)
