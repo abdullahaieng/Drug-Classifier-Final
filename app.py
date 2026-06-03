@@ -207,6 +207,25 @@ def _missing_artifacts() -> list[Path]:
     return [p for p in MODEL_FILES.values() if not p.exists()]
 
 
+def _purge_artifacts() -> None:
+    """Remove broken/incompatible pkl files so we can retrain."""
+    for path in MODEL_FILES.values():
+        path.unlink(missing_ok=True)
+    load_artifacts.clear()
+    _trained_bundle.clear()
+    evaluation_bundle.clear()
+
+
+def _load_from_disk() -> dict:
+    return {
+        "logistic": joblib.load(MODEL_FILES["logistic"]),
+        "knn": joblib.load(MODEL_FILES["knn"]),
+        "scaler": joblib.load(MODEL_FILES["scaler"]),
+        "encoders": joblib.load(MODEL_FILES["encoders"]),
+        "drug_encoder": joblib.load(MODEL_FILES["drug_encoder"]),
+    }
+
+
 @st.cache_resource
 def _trained_bundle() -> dict:
     """Train once in memory when pkl files are missing (Streamlit Cloud safe)."""
@@ -227,25 +246,32 @@ def _trained_bundle() -> dict:
     }
 
 
-def ensure_artifacts() -> bool:
-    """Load from disk or train. Returns True when training ran."""
-    if not _missing_artifacts():
-        return False
-    _trained_bundle()
-    return True
-
-
 @st.cache_resource
 def load_artifacts() -> dict:
+    """Load saved models or train in memory (Streamlit Cloud safe)."""
     if not _missing_artifacts():
-        return {
-            "logistic": joblib.load(MODEL_FILES["logistic"]),
-            "knn": joblib.load(MODEL_FILES["knn"]),
-            "scaler": joblib.load(MODEL_FILES["scaler"]),
-            "encoders": joblib.load(MODEL_FILES["encoders"]),
-            "drug_encoder": joblib.load(MODEL_FILES["drug_encoder"]),
-        }
+        try:
+            return _load_from_disk()
+        except Exception:
+            _purge_artifacts()
     return _trained_bundle()
+
+
+def _encoded_train_test(df: pd.DataFrame, art: dict) -> tuple:
+    """Train/test split with saved encoders (no retrain)."""
+    encoders = art["encoders"]
+    drug_enc = art["drug_encoder"]
+    X = df.drop("Drug", axis=1).copy()
+    y = drug_enc.transform(df["Drug"])
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    X_train = X_train.copy()
+    X_test = X_test.copy()
+    for col in ("Sex", "BP", "Cholesterol"):
+        X_train[col] = encoders[col].transform(X_train[col])
+        X_test[col] = encoders[col].transform(X_test[col])
+    return X_train, X_test, y_train, y_test
 
 
 @st.cache_data
@@ -256,29 +282,15 @@ def load_clean_data() -> pd.DataFrame:
 @st.cache_data
 def evaluation_bundle(_cache_key: int = 1) -> dict:
     """Dynamic metrics from saved artifacts + notebook train/test split."""
-    ensure_artifacts()
-
     df_raw = pd.read_csv(DATA_PATH)
     df = load_clean_data()
-    pipe = notebook_train_pipeline(df)
-
     art = load_artifacts()
-    encoders = art["encoders"]
     scaler = art["scaler"]
     drug_enc = art["drug_encoder"]
     logistic = art["logistic"]
     knn = art["knn"]
 
-    X = df.drop("Drug", axis=1)
-    y = drug_enc.transform(df["Drug"])
-
-    _, X_test, _, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-    X_test = X_test.copy()
-    X_test["Sex"] = encoders["Sex"].transform(X_test["Sex"])
-    X_test["BP"] = encoders["BP"].transform(X_test["BP"])
-    X_test["Cholesterol"] = encoders["Cholesterol"].transform(X_test["Cholesterol"])
+    X_train, X_test, _, y_test = _encoded_train_test(df, art)
     X_test_scaled = scaler.transform(X_test)
 
     y_pred_lr = logistic.predict(X_test_scaled)
@@ -300,11 +312,11 @@ def evaluation_bundle(_cache_key: int = 1) -> dict:
         "df_raw": df_raw,
         "df_clean": df,
         "duplicates_removed": int(df_raw.duplicated().sum()),
-        "train_shape": pipe["train_shape"],
-        "test_shape": pipe["test_shape"],
-        "scaled_head": pipe["scaled_head"],
-        "drug_mapping": pipe["drug_mapping"],
-        "encoders": encoders,
+        "train_shape": X_train.shape,
+        "test_shape": X_test.shape,
+        "scaled_head": scaler.transform(X_train)[:5],
+        "drug_mapping": {i: c for i, c in enumerate(drug_enc.classes_)},
+        "encoders": art["encoders"],
         "lr_metrics": lr_m,
         "knn_metrics": knn_m,
         "best_model": best,
@@ -340,7 +352,8 @@ def preprocess_input(
 def predict_drug(model, X_scaled: np.ndarray, drug_encoder: LabelEncoder) -> dict:
     t0 = time.perf_counter()
     idx = int(model.predict(X_scaled)[0])
-    proba = model.predict_proba(X_scaled)[0]
+    proba_raw = model.predict_proba(X_scaled)
+    proba = np.asarray(proba_raw[0], dtype=float).ravel()
     elapsed = (time.perf_counter() - t0) * 1000
     classes = drug_encoder.inverse_transform(np.arange(len(proba)))
     return {
@@ -965,31 +978,27 @@ def render_notebook_lab(ev: dict, dark: bool) -> None:
 # Main app
 # =============================================================================
 def run_app() -> None:
-    st.set_page_config(
-        page_title="DrugAI | Drug200",
-        page_icon="💊",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
-    init_session()
-    inject_css(st.session_state.dark_mode)
-
     try:
-        if ensure_artifacts():
-            load_artifacts.clear()
-            _trained_bundle.clear()
-            evaluation_bundle.clear()
+        st.set_page_config(
+            page_title="DrugAI | Drug200",
+            page_icon="💊",
+            layout="wide",
+            initial_sidebar_state="expanded",
+        )
+        init_session()
+        inject_css(st.session_state.dark_mode)
+
         with st.spinner("Loading models…"):
             artifacts = load_artifacts()
+        df = load_clean_data()
     except FileNotFoundError as exc:
         st.error(str(exc))
-        st.info(
-            "Deploy checklist: `drug200.csv` + `app.py` in repo root. "
-            "Missing `.pkl` files are auto-generated on first run (~10s)."
-        )
+        st.info("Repo root mein `drug200.csv` add karo, phir Reboot app.")
         st.stop()
-
-    df = load_clean_data()
+    except Exception as exc:
+        st.error("App start nahi ho saki. Neeche error detail hai:")
+        st.exception(exc)
+        st.stop()
 
     with st.sidebar:
         st.markdown("## DrugAI")
@@ -1020,8 +1029,8 @@ def run_app() -> None:
     st.caption("Educational demonstration only — not for clinical diagnosis without validation.")
 
 
-if __name__ == "__main__":
-    if "export" in sys.argv:
-        export_models()
-    else:
-        run_app()
+if "export" in sys.argv:
+    export_models()
+else:
+    # Streamlit Cloud always runs this branch (not only __main__).
+    run_app()

@@ -17,7 +17,11 @@ python app.py export
 streamlit run app.py
 ```
 
-`export` sirf ek baar chalao (models save). App startup par sirf saved `.pkl` load karti hai — **retrain nahi**.
+**Local:** `python app.py export` ek baar (optional — models `models/` mein save).
+
+**Streamlit Cloud:** Repo mein `drug200.csv` + `.python-version` (3.12) + pinned `scikit-learn==1.6.1` rakho. Agar `.pkl` missing hon to app memory mein train karti hai (sklearn 1.7+ par LogisticRegression OvR-wrapped hai).
+
+Predict par **retrain nahi** — sirf saved/auto-built models use hoti hain.
 
 ## Notebook parity
 
