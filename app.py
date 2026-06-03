@@ -41,6 +41,8 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 # =============================================================================
 # Configuration
 # =============================================================================
+APP_VERSION = "2.1.0"  # sidebar — verify Streamlit Cloud pulled latest app.py
+
 ROOT = Path(__file__).resolve().parent
 DATA_PATH = ROOT / "drug200.csv"
 MODELS_DIR = ROOT / "models"
@@ -1019,6 +1021,7 @@ def run_app() -> None:
             st.metric("LR Accuracy", f"{ev['lr_metrics']['accuracy']:.2f}%")
             st.metric("KNN Accuracy", f"{ev['knn_metrics']['accuracy']:.2f}%")
         st.caption("Saved models on disk · Predict uses export only")
+        st.caption(f"Build {APP_VERSION}")
 
     if st.session_state.page == "Prediction":
         render_prediction_page(df, artifacts, st.session_state.dark_mode)
