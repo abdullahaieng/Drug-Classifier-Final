@@ -42,7 +42,7 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 # =============================================================================
 # Configuration
 # =============================================================================
-APP_VERSION = "2.2.0"  # sidebar — verify Streamlit Cloud pulled latest app.py
+APP_VERSION = "2.2.1"  # sidebar — verify Streamlit Cloud pulled latest app.py
 
 ROOT = Path(__file__).resolve().parent
 DATA_PATH = ROOT / "drug200.csv"
@@ -593,22 +593,26 @@ THEME = {
     "light": {
         "bg": "#eef2f6",
         "surface": "#ffffff",
-        "sidebar": "#e8f4f2",
-        "border": "#d1dde8",
-        "text": "#1e293b",
-        "muted": "#64748b",
+        "sidebar": "#f8fafc",
+        "nav_bg": "#ffffff",
+        "border": "#cbd5e1",
+        "text": "#0f172a",
+        "heading": "#020617",
+        "muted": "#475569",
         "accent": "#0f766e",
         "accent_soft": "#ccfbf1",
         "secondary": "#1d4ed8",
         "hero_grad": "linear-gradient(135deg, #0f766e 0%, #155e75 55%, #1e40af 100%)",
-        "shadow": "0 8px 24px rgba(15, 118, 110, 0.12)",
+        "shadow": "0 4px 16px rgba(15, 23, 42, 0.08)",
     },
     "dark": {
         "bg": "#0f172a",
         "surface": "#1e293b",
         "sidebar": "#0c1222",
+        "nav_bg": "#1e293b",
         "border": "#334155",
         "text": "#f1f5f9",
+        "heading": "#f8fafc",
         "muted": "#94a3b8",
         "accent": "#2dd4bf",
         "accent_soft": "#134e4a",
@@ -630,8 +634,10 @@ def inject_css(dark: bool) -> None:
         :root {{
             --bg: {t["bg"]};
             --surface: {t["surface"]};
+            --nav-bg: {t["nav_bg"]};
             --border: {t["border"]};
             --text: {t["text"]};
+            --heading: {t["heading"]};
             --muted: {t["muted"]};
             --accent: {t["accent"]};
             --accent-soft: {t["accent_soft"]};
@@ -648,9 +654,56 @@ def inject_css(dark: bool) -> None:
             font-family: 'Inter', system-ui, sans-serif !important;
             font-size: var(--fs-base);
             line-height: 1.5;
+            color: var(--text) !important;
         }}
 
-        .stApp {{ background: var(--bg) !important; }}
+        .stApp {{ background: var(--bg) !important; color: var(--text) !important; }}
+
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        section.main {{
+            color: var(--text) !important;
+        }}
+
+        /* Global readable text (light = dark text, dark = light text) */
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] li,
+        [data-testid="stMarkdownContainer"] span,
+        [data-testid="stHeading"] h1,
+        [data-testid="stHeading"] h2,
+        [data-testid="stHeading"] h3,
+        [data-testid="stHeading"] h4,
+        [data-testid="stWidgetLabel"] p,
+        [data-testid="stCheckbox"] label span,
+        [data-testid="stRadio"] label span,
+        [data-testid="stSelectbox"] label span,
+        [data-testid="stSlider"] label span,
+        [data-baseweb="tab"],
+        [data-testid="stMetricLabel"],
+        .stTabs [data-baseweb="tab"] {{
+            color: var(--text) !important;
+        }}
+
+        [data-testid="stHeading"] h1,
+        [data-testid="stHeading"] h2,
+        [data-testid="stHeading"] h3 {{
+            color: var(--heading) !important;
+        }}
+
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+        [data-testid="stSelectbox"] [data-baseweb="select"] span {{
+            color: var(--text) !important;
+            background-color: var(--surface) !important;
+        }}
+
+        [data-testid="stSlider"] [data-testid="stThumbValue"],
+        [data-testid="stSlider"] [data-testid="stTickLabel"] {{
+            color: var(--text) !important;
+        }}
+
+        .stCode, pre, code {{
+            color: var(--text) !important;
+        }}
 
         [data-testid="stToolbar"], .stDeployButton, #MainMenu, footer {{
             display: none !important;
@@ -684,23 +737,59 @@ def inject_css(dark: bool) -> None:
         }}
 
         /* Headings — single scale */
-        .main h1 {{ font-size: var(--fs-2xl) !important; font-weight: 700 !important; }}
+        .main h1 {{ font-size: var(--fs-2xl) !important; font-weight: 700 !important; color: var(--heading) !important; }}
         .main h2, [data-testid="stHeading"] h2 {{
             font-size: var(--fs-xl) !important;
             font-weight: 600 !important;
-            color: var(--text) !important;
+            color: var(--heading) !important;
             margin-top: 1.25rem !important;
             margin-bottom: 0.65rem !important;
         }}
-        .main h3 {{ font-size: var(--fs-lg) !important; font-weight: 600 !important; }}
-        .main h4 {{ font-size: var(--fs-md) !important; font-weight: 600 !important; }}
+        .main h3 {{ font-size: var(--fs-lg) !important; font-weight: 600 !important; color: var(--heading) !important; }}
+        .main h4 {{ font-size: var(--fs-md) !important; font-weight: 600 !important; color: var(--heading) !important; }}
 
         .main p, .main li, .main .stMarkdown, label {{
             color: var(--text) !important;
             font-size: var(--fs-md) !important;
         }}
 
-        .stCaption {{ color: var(--muted) !important; font-size: var(--fs-sm) !important; }}
+        .stCaption, .nav-sub {{ color: var(--muted) !important; font-size: var(--fs-sm) !important; }}
+
+        /* Top navigation bar */
+        .app-navbar {{
+            background: var(--nav-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 0.75rem 1rem 0.85rem;
+            margin-bottom: 1.25rem;
+            box-shadow: {t["shadow"]};
+        }}
+        .nav-brand {{
+            color: var(--heading) !important;
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+            line-height: 1.2 !important;
+        }}
+        .nav-sub {{
+            margin: 0.15rem 0 0 0 !important;
+            font-weight: 500 !important;
+        }}
+        .app-navbar .stButton button[kind="secondary"] {{
+            background: transparent !important;
+            color: var(--text) !important;
+            border: 1px solid var(--border) !important;
+            font-weight: 600 !important;
+        }}
+        .app-navbar .stButton button[kind="primary"] {{
+            background: var(--accent) !important;
+            color: #ffffff !important;
+            border: 0 !important;
+        }}
+        .app-navbar [data-testid="stToggle"] label span {{
+            color: var(--text) !important;
+            font-weight: 500 !important;
+        }}
 
         /* Hero banner */
         .hero {{
@@ -802,6 +891,11 @@ def inject_css(dark: bool) -> None:
         .stButton button[kind="primary"]:hover {{
             filter: brightness(1.08);
         }}
+        .stButton button[kind="secondary"] {{
+            color: var(--text) !important;
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+        }}
 
         /* Tabs */
         .stTabs [data-baseweb="tab-list"] {{
@@ -844,6 +938,47 @@ def page_hero(title: str, subtitle: str) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_navbar() -> None:
+    """Sticky-style top navigation: pages + theme toggle."""
+    st.markdown('<div class="app-navbar">', unsafe_allow_html=True)
+    col_brand, col_p1, col_p2, col_theme, col_ver = st.columns([2.4, 1.15, 1.25, 1.35, 0.5])
+
+    with col_brand:
+        st.markdown(
+            '<p class="nav-brand">DrugAI</p><p class="nav-sub">Drug200 Classification · FYP</p>',
+            unsafe_allow_html=True,
+        )
+
+    nav_items = [("Prediction", "nav_pred"), ("Notebook Lab", "nav_lab")]
+    for (page_name, key), col in zip(nav_items, (col_p1, col_p2)):
+        with col:
+            is_active = st.session_state.page == page_name
+            if st.button(
+                page_name,
+                key=key,
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+            ):
+                if st.session_state.page != page_name:
+                    st.session_state.page = page_name
+                    st.rerun()
+
+    with col_theme:
+        st.session_state.dark_mode = st.toggle(
+            "Dark theme",
+            value=st.session_state.dark_mode,
+            key="nav_dark_toggle",
+        )
+
+    with col_ver:
+        st.markdown(
+            f'<p class="nav-sub" style="text-align:right;margin-top:0.5rem;">v{APP_VERSION}</p>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_pred_card(model_name: str, pred: dict, css_class: str) -> None:
@@ -1205,7 +1340,7 @@ def run_app() -> None:
             page_title="DrugAI | Drug200",
             page_icon="💊",
             layout="wide",
-            initial_sidebar_state="expanded",
+            initial_sidebar_state="collapsed",
         )
         init_session()
         inject_css(st.session_state.dark_mode)
@@ -1222,28 +1357,24 @@ def run_app() -> None:
         st.exception(exc)
         st.stop()
 
+    render_navbar()
+    inject_css(st.session_state.dark_mode)
+
     with st.sidebar:
-        st.markdown("## DrugAI")
-        st.caption("Final Year Project · Drug Classification")
-        st.session_state.dark_mode = st.toggle("Dark mode", value=st.session_state.dark_mode)
-        inject_css(st.session_state.dark_mode)
-        st.divider()
-        st.session_state.page = st.radio(
-            "Navigation",
-            ["Prediction", "Notebook Lab"],
-            index=0 if st.session_state.page == "Prediction" else 1,
-        )
-        st.divider()
+        st.markdown("### About")
+        st.caption("Logistic Regression + KNN · Drug200 dataset")
         if st.session_state.page == "Notebook Lab":
-            with st.spinner("Computing metrics..."):
+            st.divider()
+            st.markdown("**Model scores**")
+            with st.spinner("Computing…"):
                 ev = evaluation_bundle()
             st.metric("Best model", ev["best_model"])
             st.metric("LR Accuracy", f"{ev['lr_metrics']['accuracy']:.2f}%")
             st.metric("KNN Accuracy", f"{ev['knn_metrics']['accuracy']:.2f}%")
-        st.caption("Saved models on disk · Predict uses export only")
+        st.divider()
         st.caption(f"Build {APP_VERSION} · sklearn {sklearn.__version__}")
         if _is_cloud_host():
-            st.caption("Cloud mode: in-memory training")
+            st.caption("Cloud: in-memory training")
 
     if st.session_state.page == "Prediction":
         render_prediction_page(df, artifacts, st.session_state.dark_mode)
