@@ -1,40 +1,118 @@
-# Drug AI — Drug Classification App
+# Drug AI
 
-Simple structure:
+A simple machine learning project built with Streamlit that predicts the recommended drug based on patient information from the Drug200 dataset.
 
+## Project Structure
+
+```text
+Drug-AI/
+│
+├── app.py
+├── drug200.csv
+├── requirements.txt
+├── .python-version
+├── models/
+│   ├── logistic_model.pkl
+│   ├── knn_model.pkl
+│   ├── scaler.pkl
+│   ├── encoders.pkl
+│   └── drug_encoder.pkl
+└── README.md
 ```
-drug200.csv
-app.py
-models/          ← joblib files (after export)
-requirements.txt
-```
 
-## Setup
+## Installation
+
+Clone the repository and install the required packages.
 
 ```bash
 pip install -r requirements.txt
+```
+
+If you want to export the trained models locally, run:
+
+```bash
 python app.py export
+```
+
+Then start the app:
+
+```bash
 streamlit run app.py
 ```
 
-**Local:** `python app.py export` ek baar (optional — models `models/` mein save).
+---
 
-**Streamlit Cloud:** Repo mein `drug200.csv` + `.python-version` (3.12) + pinned `scikit-learn==1.6.1` rakho. Agar `.pkl` missing hon to app memory mein train karti hai (sklearn 1.7+ par LogisticRegression OvR-wrapped hai).
+## How it works
 
-Predict par **retrain nahi** — sirf saved/auto-built models use hoti hain.
+The application follows the same preprocessing steps used during model training.
 
-## Notebook parity
+* Encodes Sex, BP and Cholesterol
+* Scales numerical values using StandardScaler
+* Makes predictions with the selected model
+* Converts the predicted label back to the original drug name
 
-Pipeline = notebook jaisa: label encode (Sex, BP, Cholesterol) → `StandardScaler` → `predict` → drug name inverse transform.
+The app loads the saved models from the `models` folder. If they are not available, it trains them once in memory when the application starts.
 
-Test accuracy: LR **85%**, KNN **87.5%**.
+Predictions never retrain the model.
+
+---
+
+## Models
+
+Two models are included.
+
+| Model               | Accuracy |
+| ------------------- | -------- |
+| Logistic Regression | 85%      |
+| KNN                 | 87.5%    |
+
+---
 
 ## Features
 
-- Light / Dark medical theme (sidebar toggle)
-- Notebook graphs: countplot, histplot+kde, confusion heatmaps
-- Predictions = saved models only (notebook pipeline)
+* Drug prediction
+* Logistic Regression and KNN models
+* Light and Dark mode
+* Dataset visualizations
+* Confusion matrix
+* Streamlit interface
+* Automatic model loading
+* Streamlit Cloud support
+
+---
+
+## Streamlit Cloud
+
+For deployment, keep these files in the repository.
+
+* drug200.csv
+* requirements.txt
+* .python-version
+* models folder (recommended)
+
+If the model files are missing, the app creates them automatically when it starts.
+
+---
+
+## Requirements
+
+* Python 3.12
+* Streamlit
+* scikit-learn 1.6.1
+* Pandas
+* NumPy
+* Matplotlib
+* Seaborn
+* Joblib
+
+Install everything using:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
 
 ## Note
 
-Educational demo — medical advice nahi.
+This project was built for learning and demonstration purposes. It should not be used for real medical decisions.
