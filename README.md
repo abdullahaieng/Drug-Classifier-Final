@@ -31,7 +31,7 @@ Interactive input panel with custom sliders for Age and Na_to_K ratio alongside 
 ### 2. Prediction Probability Charts
 Comparative visual output displaying class probability distributions for Logistic Regression versus KNN models.
 
-![Prediction Probability](./assets/2.png)
+![Prediction Probability](./assests/2.png)
 
 ---
 
