@@ -1,118 +1,94 @@
-# Drug AI
+# 💊 DrugAI - Drug Recommendation System & Data Lab
 
-A simple machine learning project built with Streamlit that predicts the recommended drug based on patient information from the Drug200 dataset.
+An interactive Machine Learning web application and Exploratory Data Analysis (EDA) laboratory built with **Streamlit** and **Python**. The system classifies and predicts target drug types based on patient parameters (Age, Sex, Blood Pressure, Cholesterol, and Sodium-to-Potassium ratio) using multiple trained algorithms (Logistic Regression & KNN).
 
-## Project Structure
-
-```text
-Drug-AI/
-│
-├── app.py
-├── drug200.csv
-├── requirements.txt
-├── .python-version
-├── models/
-│   ├── logistic_model.pkl
-│   ├── knn_model.pkl
-│   ├── scaler.pkl
-│   ├── encoders.pkl
-│   └── drug_encoder.pkl
-└── README.md
-```
-
-## Installation
-
-Clone the repository and install the required packages.
-
-```bash
-pip install -r requirements.txt
-```
-
-If you want to export the trained models locally, run:
-
-```bash
-python app.py export
-```
-
-Then start the app:
-
-```bash
-streamlit run app.py
-```
+* **Live Interactive Demo:** [drug-classifier-final.streamlit.app](https://drug-classifier-final-fy63j8bqhmqdbfyfufn5of.streamlit.app/)
+* **GitHub Repository:** [https://github.com/abdullahaieng/Drug-Classifier-Final](https://github.com/abdullahaieng/Drug-Classifier-Final/)
 
 ---
 
-## How it works
+## 🌟 Key Features
 
-The application follows the same preprocessing steps used during model training.
-
-* Encodes Sex, BP and Cholesterol
-* Scales numerical values using StandardScaler
-* Makes predictions with the selected model
-* Converts the predicted label back to the original drug name
-
-The app loads the saved models from the `models` folder. If they are not available, it trains them once in memory when the application starts.
-
-Predictions never retrain the model.
+- **Real-Time Inference Engine:** Predicts suitable drug prescriptions using Logistic Regression and K-Nearest Neighbors (KNN) algorithms.
+- **Interactive Parameter Controls:** Adjust patient demographic metrics with real-time sliders and selection menus.
+- **Prediction Probability Breakdown:** Visualizes confidence scores across all target classes.
+- **In-App Prediction History:** Tracks user inputs with timestamped logs and instant CSV export capabilities.
+- **Notebook Lab Environment:** Integrated Exploratory Data Analysis (EDA) module displaying dataset metrics, data hygiene checks, statistical distributions, and label encoding schemes.
 
 ---
 
-## Models
+## 📸 Screenshots & Workflow
 
-Two models are included.
+Rename your uploaded images as `1.png` through `8.png` and place them inside an `assets/` directory in your repository.
 
-| Model               | Accuracy |
-| ------------------- | -------- |
-| Logistic Regression | 85%      |
-| KNN                 | 87.5%    |
+### 1. Patient Parameters & Prediction Interface
+Interactive input panel with custom sliders for Age and Na_to_K ratio alongside dropdown selections for Sex, Blood Pressure, and Cholesterol.
 
----
-
-## Features
-
-* Drug prediction
-* Logistic Regression and KNN models
-* Light and Dark mode
-* Dataset visualizations
-* Confusion matrix
-* Streamlit interface
-* Automatic model loading
-* Streamlit Cloud support
+![Patient Parameters Interface](./assets/1.png)
 
 ---
 
-## Streamlit Cloud
+### 2. Prediction Probability Charts
+Comparative visual output displaying class probability distributions for Logistic Regression versus KNN models.
 
-For deployment, keep these files in the repository.
-
-* drug200.csv
-* requirements.txt
-* .python-version
-* models folder (recommended)
-
-If the model files are missing, the app creates them automatically when it starts.
+![Prediction Probability](./assets/2.png)
 
 ---
 
-## Requirements
+### 3. Prediction History & CSV Export
+Timestamped log of past inferences with options to download results as CSV or clear execution history.
 
-* Python 3.12
-* Streamlit
-* scikit-learn 1.6.1
-* Pandas
-* NumPy
-* Matplotlib
-* Seaborn
-* Joblib
-
-Install everything using:
-
-```bash
-pip install -r requirements.txt
-```
+![Prediction History](./assets/3.png)
 
 ---
 
-## Note
+### 4. Notebook Lab - Dataset Preview
+Overview of the embedded EDA laboratory displaying raw dataset records and attribute tables.
 
-This project was built for learning and demonstration purposes. It should not be used for real medical decisions.
+![Dataset Preview](./assets/4.png)
+
+---
+
+### 5. Head/Tail Analysis & Dataset Shape
+Dataset structure inspect tab showing sample head/tail rows, row/column counts, and duplicate record checks.
+
+![Head and Tail Analysis](./assets/5.png)
+
+---
+
+### 6. Dataset Info Summary
+Data structural summary detailing column names, non-null entry counts, memory footprint, and data types (Dtype).
+
+![Info Summary](./assets/6.png)
+
+---
+
+### 7. Missing Values Verification
+Automated data cleaning tab confirming zero missing or null entries across all patient features.
+
+![Missing Values Check](./assets/7.png)
+
+---
+
+### 8. Statistical Summary & Label Encoding
+Comprehensive statistical summary table (mean, std, min/max quartiles) and categorical label encoding mappings for target classes.
+
+![Statistical Summary and Label Encoding](./assets/8.png)
+
+---
+
+## 🛠️ Tech Stack & Libraries
+
+- **Framework:** [Streamlit](https://streamlit.io/)
+- **Machine Learning:** Scikit-Learn (Logistic Regression, KNN)
+- **Data Manipulation:** Pandas, NumPy
+- **Visualizations:** Matplotlib, Seaborn
+- **Language:** Python 3.x
+
+---
+
+## 🚀 Local Setup & Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/abdullahaieng/Drug-Classifier-Final.git](https://github.com/abdullahaieng/Drug-Classifier-Final.git)
