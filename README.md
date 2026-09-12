@@ -24,7 +24,7 @@ Rename your uploaded images as `1.png` through `8.png` and place them inside an 
 ### 1. Patient Parameters & Prediction Interface
 Interactive input panel with custom sliders for Age and Na_to_K ratio alongside dropdown selections for Sex, Blood Pressure, and Cholesterol.
 
-![Patient Parameters Interface](./assets/1.png)
+![Patient Parameters Interface](./assests/1.png)
 
 ---
 
@@ -38,42 +38,42 @@ Comparative visual output displaying class probability distributions for Logisti
 ### 3. Prediction History & CSV Export
 Timestamped log of past inferences with options to download results as CSV or clear execution history.
 
-![Prediction History](./assets/3.png)
+![Prediction History](./assests/3.png)
 
 ---
 
 ### 4. Notebook Lab - Dataset Preview
 Overview of the embedded EDA laboratory displaying raw dataset records and attribute tables.
 
-![Dataset Preview](./assets/4.png)
+![Dataset Preview](./assests/4.png)
 
 ---
 
 ### 5. Head/Tail Analysis & Dataset Shape
 Dataset structure inspect tab showing sample head/tail rows, row/column counts, and duplicate record checks.
 
-![Head and Tail Analysis](./assets/5.png)
+![Head and Tail Analysis](./assests/5.png)
 
 ---
 
 ### 6. Dataset Info Summary
 Data structural summary detailing column names, non-null entry counts, memory footprint, and data types (Dtype).
 
-![Info Summary](./assets/6.png)
+![Info Summary](./assests/6.png)
 
 ---
 
 ### 7. Missing Values Verification
 Automated data cleaning tab confirming zero missing or null entries across all patient features.
 
-![Missing Values Check](./assets/7.png)
+![Missing Values Check](./assests/7.png)
 
 ---
 
 ### 8. Statistical Summary & Label Encoding
 Comprehensive statistical summary table (mean, std, min/max quartiles) and categorical label encoding mappings for target classes.
 
-![Statistical Summary and Label Encoding](./assets/8.png)
+![Statistical Summary and Label Encoding](./assests/8.png)
 
 ---
 
